@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <div class="card header">
+    <h2 id="welcome"></h2>
+    <h1><span id="balance">0</span> บาท</h1>
+    <h2>Gold: <span id="gold">0</span> g</h2>
+    <button onclick="logout()" class="logout">Logout</button>
+  </div>
+
+  <div class="card">
+    <h3>Portfolio</h3>
+    <p>Cash: <span id="cash">0</span> บาท</p>
+    <p>Gold Value: <span id="goldValue">0</span> บาท</p>
+    <p>P/L: <span id="pnl">0%</span></p>
+    <h2>Total: <span id="total">0</span> บาท</h2>
+  </div>
+
+  <div class="card">
+    <h3>💰 Gold Price</h3>
+    <p>Buy: <span id="goldBuy">-</span></p>
+    <p>Sell: <span id="goldSell">-</span></p>
+  </div>
+
+  <div class="card">
+    <h3>Deposit</h3>
+    <input id="depositAmount" type="number">
+    <button onclick="deposit()">Deposit</button>
+  </div>
+
+  <div class="card">
+    <h3>Withdraw</h3>
+    <input id="withdrawAmount" type="number">
+    <button onclick="withdraw()">Withdraw</button>
+  </div>
+
+  <div class="card">
+    <h3>Transfer</h3>
+    <input id="toEmail">
+    <input id="transferAmount" type="number">
+    <button onclick="transfer()">Transfer</button>
+  </div>
+
+  <div class="card">
+    <h3>Transaction History</h3>
+    <ul id="history"></ul>
+  </div>
+
+  <div class="card">
+    <h3>🟡 Buy Gold</h3>
+    <input id="buyAmount">
+    <button onclick="buyGold()">Buy</button>
+  </div>
+
+  <div class="card">
+    <h3>💰 Sell Gold</h3>
+    <input id="sellAmount">
+    <button onclick="sellGold()">Sell</button>
+  </div>
+
+  <div class="card">
+    <h3>📈 Gold Chart</h3>
+    <canvas id="goldChart"></canvas>
+  </div>
+
+  <div class="card">
+    <h3>🎯 ตั้งเป้าออมทอง</h3>
+
+    <input id="goalInput" type="number" placeholder="เช่น 10 (gram)">
+
+    <button onclick="setGoal()">ตั้งเป้า</button>
+
+    <p>Progress: <span id="goalProgress">0%</span></p>
+
+    <div class="card">
+      <h3>🔔 Alert ราคาทอง</h3>
+
+      <input id="alertInput" type="number" placeholder="ราคาที่ต้องการ">
+
+      <button onclick="setAlert()">ตั้งเตือน</button>
+    </div>
+</div>
+
+</div>
+
+<!-- ✅ โหลด Chart ก่อน -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="app.js"></script>
+
+<div id="toast" class="toast"></div>
+
+</body>
+</html>
