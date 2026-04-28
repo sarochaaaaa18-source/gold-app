@@ -1,4 +1,4 @@
-const API = "";
+const API = window.location.origin;
 
 let chart;
 let priceHistory = [];

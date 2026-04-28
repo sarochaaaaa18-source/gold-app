@@ -14,19 +14,16 @@ app.use(cors({
 // ===== SERVE FRONTEND =====
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-const SECRET = "mysecretkey";
+const SECRET = process.env.JWT_SECRET;
 let goldPriceData = {
   buy: 0,
   sell: 0
 };
 
 // ===== CONNECT DB =====
-mongoose.connect("mongodb://sarochaaaaa18_db_user:LB2bb0uq4GYEq37k@ac-9irsuup-shard-00-00.hhhm3cs.mongodb.net:27017,ac-9irsuup-shard-00-01.hhhm3cs.mongodb.net:27017,ac-9irsuup-shard-00-02.hhhm3cs.mongodb.net:27017/myDB?ssl=true&replicaSet=atlas-g8ovid-shard-0&authSource=admin&retryWrites=true&w=majority")
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => {
-    console.log("❌ FULL ERROR:");
-    console.log(err);
-  });
+  .catch(err => console.log(err));
 
 // ===== SCHEMA =====
 const transactionSchema = new mongoose.Schema({
@@ -449,7 +446,7 @@ app.post("/sell-gold", auth, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log("Server running on port " + PORT);
 });
 
 app.get("/reset", async (req, res) => {
