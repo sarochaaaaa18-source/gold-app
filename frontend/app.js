@@ -110,7 +110,7 @@ async function updatePortfolio(user) {
 
 // ===== GOLD PRICE =====
 async function loadGoldPrice() {
-  const res = await fetch("/gold-price");
+  const res = await fetch("https://gold-app-f1ev.onrender.com/gold-price");
   const data = await res.json();
 
   document.getElementById("goldBuy").textContent = data.buy;
@@ -233,7 +233,7 @@ async function buyGold() {
     return alert("Invalid amount");
   }
 
-  const data = await api("/buy-gold", "POST", { amount });
+  const data = await api("https://gold-app-f1ev.onrender.com/buy-gold", "POST", { amount });
 
   if (!data.success) return alert(data.message);
 
@@ -251,7 +251,7 @@ async function sellGold() {
     return alert("Invalid gold");
   }
 
-  const data = await api("/sell-gold", "POST", { gold });
+  const data = await api("https://gold-app-f1ev.onrender.com/sell-gold", "POST", { gold });
 
   if (!data.success) return alert(data.message);
 
@@ -318,7 +318,7 @@ if (registerForm) {
     const password = document.getElementById("password").value;
 
     try {
-      const res = await fetch("/register", {
+      const res = await fetch("https://gold-app-f1ev.onrender.com/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -358,7 +358,7 @@ if (loginForm) {
     const password = document.getElementById("password").value;
 
     try {
-      const res = await fetch("/login", {
+      const res = await fetch("https://gold-app-f1ev.onrender.com/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -400,7 +400,7 @@ async function setGoal() {
     return alert("Invalid goal");
   }
 
-  const res = await api("/set-goal", "POST", { goal });
+  const res = await api("https://gold-app-f1ev.onrender.com/set-goal", "POST", { goal });
 
   if (!res.success) {
     return alert(res.message);

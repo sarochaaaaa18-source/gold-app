@@ -3,13 +3,16 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const express = require("express");
-const cors = require("cors");
-const path = require("path");
-
 const app = express();
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const cors = require("cors");
 app.use(cors({
   origin: "*"
 }));
+const path = require("path");
 
 // ===== SERVE FRONTEND =====
 app.use(express.static(path.join(__dirname, "../frontend")));
@@ -112,37 +115,39 @@ app.post("/register", async (req, res) => {
 
 // ===== LOGIN =====
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  console.log("==== LOGIN DEBUG ====");
-  console.log("EMAIL:", email);
-  console.log("PASSWORD:", password);
+    console.log("LOGIN INPUT:", email);
 
-  const user = await User.findOne({ email });
-  console.log("USER FROM DB:", user);
+    const user = await User.findOne({ email });
 
-  if (!user) {
-    console.log("❌ USER NOT FOUND");
-    return res.json({ success: false });
+    if (!user) {
+      return res.json({ success: false });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.json({ success: false });
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({ success: true, token });
+
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  console.log("PASSWORD MATCH:", isMatch);
-
-  if (!isMatch) {
-    console.log("❌ PASSWORD WRONG");
-    return res.json({ success: false });
-  }
-
-  const token = jwt.sign(
-    { email: user.email },
-    SECRET,
-    { expiresIn: "1h" }
-  );
-
-  console.log("✅ LOGIN SUCCESS");
-
-  res.json({ success: true, token });
 });
 
 // ===== GET USER =====
