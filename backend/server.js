@@ -152,7 +152,7 @@ app.post("/login", async (req, res) => {
 
 // ===== GET USER =====
 app.get("/me", auth, async (req, res) => {
-  const user = await User.findOne({ email: req.user.email });
+  const user = await User.findById(req.user.id);
 
   if (!user) return res.json({ success: false });
 
@@ -179,7 +179,7 @@ app.post("/deposit", auth, async (req, res) => {
       return res.json({ success: false, message: "Invalid amount" });
     }
 
-    const user = await User.findOne({ email: req.user.email });
+    const user = await User.findById(req.user.id);
 
     user.balance += numAmount;
 
@@ -208,7 +208,7 @@ app.post("/withdraw", auth, async (req, res) => {
       return res.json({ success: false, message: "Invalid amount" });
     }
 
-    const user = await User.findOne({ email: req.user.email });
+    const user = await User.findById(req.user.id);
 
     if (user.balance < numAmount) {
       return res.json({ success: false, message: "Not enough money" });
@@ -235,7 +235,6 @@ app.post("/withdraw", auth, async (req, res) => {
 app.post("/transfer", auth, async (req, res) => {
   try {
     const { toEmail, amount } = req.body;
-    const fromEmail = req.user.email;
 
     const numAmount = Number(amount);
 
@@ -243,8 +242,15 @@ app.post("/transfer", auth, async (req, res) => {
       return res.json({ success: false, message: "Invalid amount" });
     }
 
-    const sender = await User.findOne({ email: fromEmail });
+    // ✅ ใช้ id จาก token
+    const sender = await User.findById(req.user.id);
+
+    // receiver ยังหาโดย email ได้
     const receiver = await User.findOne({ email: toEmail });
+
+    if (!sender) {
+      return res.json({ success: false, message: "Sender not found" });
+    }
 
     if (!receiver) {
       return res.json({ success: false, message: "Receiver not found" });
@@ -254,25 +260,25 @@ app.post("/transfer", auth, async (req, res) => {
       return res.json({ success: false, message: "Not enough money" });
     }
 
-    //  หักเงิน
+    // 💸 หักเงิน sender
     sender.balance -= numAmount;
 
-    //  เพิ่มเงิน
+    // 💰 เพิ่มเงิน receiver
     receiver.balance += numAmount;
 
-    //  log sender
+    // 🧾 log sender
     sender.transactions.push({
       type: "transfer_out",
       amount: numAmount,
-      to: toEmail,
+      to: receiver.email, // ใช้ของจริงจาก DB
       date: new Date().toLocaleString()
     });
 
-    //  log receiver
+    // 🧾 log receiver
     receiver.transactions.push({
       type: "transfer_in",
       amount: numAmount,
-      from: fromEmail,
+      from: sender.email,
       date: new Date().toLocaleString()
     });
 
@@ -282,7 +288,8 @@ app.post("/transfer", auth, async (req, res) => {
     res.json({ success: true });
 
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    console.log("TRANSFER ERROR:", err);
+    res.json({ success: false, message: err.message });
   }
 });
 
@@ -295,7 +302,7 @@ app.post("/set-goal", auth, async (req, res) => {
       return res.json({ success: false, message: "Invalid goal" });
     }
 
-    const user = await User.findOne({ email: req.user.email });
+    const user = await User.findById(req.user.id);
 
     user.goalGold = goal;
 
@@ -360,7 +367,7 @@ app.post("/buy-gold", auth, async (req, res) => {
       return res.json({ success: false, message: "Invalid amount" });
     }
 
-    const user = await User.findOne({ email: req.user.email });
+    const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.json({ success: false, message: "User not found" });
@@ -415,7 +422,7 @@ app.post("/sell-gold", auth, async (req, res) => {
       return res.json({ success: false, message: "Invalid amount" });
     }
 
-    const user = await User.findOne({ email: req.user.email });
+    const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.json({ success: false, message: "User not found" });
