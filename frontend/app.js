@@ -233,7 +233,7 @@ async function buyGold() {
     return alert("Invalid amount");
   }
 
-  const data = await api("https://gold-app-f1ev.onrender.com/buy-gold", "POST", { amount });
+  const data = await api("/buy-gold", "POST", { amount });
 
   if (!data.success) return alert(data.message);
 
@@ -251,7 +251,7 @@ async function sellGold() {
     return alert("Invalid gold");
   }
 
-  const data = await api("https://gold-app-f1ev.onrender.com/sell-gold", "POST", { gold });
+  const data = await api("/sell-gold", "POST", { gold });
 
   if (!data.success) return alert(data.message);
 
@@ -400,7 +400,7 @@ async function setGoal() {
     return alert("Invalid goal");
   }
 
-  const res = await api("https://gold-app-f1ev.onrender.com/set-goal", "POST", { goal });
+  const res = await api("/set-goal", "POST", { goal });
 
   if (!res.success) {
     return alert(res.message);
