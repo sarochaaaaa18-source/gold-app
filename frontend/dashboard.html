@@ -2,100 +2,101 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gold Century - Dashboard</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body class="dashboard-layout">
 
-<div class="container">
-
-  <div class="card header">
-    <h2 id="welcome"></h2>
-    <h1><span id="balance">0</span> บาท</h1>
-    <h2>Gold: <span id="gold">0</span> g</h2>
-    <button onclick="logout()" class="logout">Logout</button>
-  </div>
-
-  <div class="card">
-    <h3>Portfolio</h3>
-    <p>Cash: <span id="cash">0</span> บาท</p>
-    <p>Gold Value: <span id="goldValue">0</span> บาท</p>
-    <p>P/L: <span id="pnl">0%</span></p>
-    <h2>Total: <span id="total">0</span> บาท</h2>
-  </div>
-
-  <div class="card">
-    <h3>💰 Gold Price</h3>
-    <p>Buy: <span id="goldBuy">-</span></p>
-    <p>Sell: <span id="goldSell">-</span></p>
-  </div>
-
-  <div class="card">
-    <h3>Deposit</h3>
-    <input id="depositAmount" type="number">
-    <button onclick="deposit()">Deposit</button>
-  </div>
-
-  <div class="card">
-    <h3>Withdraw</h3>
-    <input id="withdrawAmount" type="number">
-    <button onclick="withdraw()">Withdraw</button>
-  </div>
-
-  <div class="card">
-    <h3>Transfer</h3>
-    <input id="toEmail">
-    <input id="transferAmount" type="number">
-    <button onclick="transfer()">Transfer</button>
-  </div>
-
-  <div class="card">
-    <h3>Transaction History</h3>
-    <ul id="history"></ul>
-  </div>
-
-  <div class="card">
-    <h3>🟡 Buy Gold</h3>
-    <input id="buyAmount">
-    <button onclick="buyGold()">Buy</button>
-  </div>
-
-  <div class="card">
-    <h3>💰 Sell Gold</h3>
-    <input id="sellAmount">
-    <button onclick="sellGold()">Sell</button>
-  </div>
-
-  <div class="card">
-    <h3>📈 Gold Chart</h3>
-    <canvas id="goldChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h3>🎯 ตั้งเป้าออมทอง</h3>
-
-    <input id="goalInput" type="number" placeholder="เช่น 10 (gram)">
-
-    <button onclick="setGoal()">ตั้งเป้า</button>
-
-    <p>Progress: <span id="goalProgress">0%</span></p>
-
-    <div class="card">
-      <h3>🔔 Alert ราคาทอง</h3>
-
-      <input id="alertInput" type="number" placeholder="ราคาที่ต้องการ">
-
-      <button onclick="setAlert()">ตั้งเตือน</button>
+  <aside class="sidebar">
+    <div class="logo-section">
+      <i class="fa-solid fa-coins gold-text"></i>
+      <h2>Gold Century</h2>
     </div>
-</div>
+    <nav class="nav-menu">
+      <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i> แดชบอร์ด</a>
+      <a href="#" onclick="switchTab('buy-sell')"><i class="fa-solid fa-arrow-right-arrow-left"></i> ซื้อ/ขายทอง</a>
+      <a href="#" onclick="switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i> ประวัติธุรกรรม</a>
+      <a href="#" onclick="logout()" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</a>
+    </nav>
+  </aside>
 
-</div>
+  <main class="main-content">
+    
+    <header class="top-header">
+      <div id="welcome" class="user-welcome">สวัสดี, กำลังโหลดข้อมูล...</div>
+      <div class="live-status"><span class="dot live-dot"></span> ตลาดเปิดอยู่</div>
+    </header>
 
-<!-- ✅ โหลด Chart ก่อน -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="app.js"></script>
+    <div class="dashboard-grid">
+      
+      <section class="grid-card total-balance-card">
+        <h3>มูลค่าสินทรัพย์ทั้งหมด</h3>
+        <h1 class="total-assets-val"><span id="total">0</span> <small>บาท</small></h1>
+        <div class="portfolio-splits">
+          <div><p>เงินสดคงเหลือ</p><strong id="cash">0</strong> บาท</div>
+          <div><p>ทองคำในพอร์ต</p><strong id="gold">0.00000</strong> กรัม</div>
+        </div>
+        <div class="pl-badge">ผลตอบแทนรวม: <span id="pnl">0%</span></div>
+      </section>
 
-<div id="toast" class="toast"></div>
+      <section class="grid-card chart-card">
+        <div class="card-header-actions">
+          <h3><i class="fa-solid fa-chart-line gold-text"></i> กราฟราคาทองคำ</h3>
+          <div class="time-filters">
+            <button class="active" onclick="changeChartRange('1d')">1D</button>
+            <button onclick="changeChartRange('1w')">1W</button>
+            <button onclick="changeChartRange('1m')">1M</button>
+            <button onclick="changeChartRange('1y')">1Y</button>
+          </div>
+        </div>
+        <div class="price-display-row">
+          <div class="price-box">ราคารับซื้อ: <span id="goldBuy" class="green-text">-</span> บาท</div>
+          <div class="price-box">ราคาขายออก: <span id="goldSell" class="red-text">-</span> บาท</div>
+        </div>
+        <div class="chart-container">
+          <canvas id="goldChart"></canvas>
+        </div>
+      </section>
 
+      <section class="grid-card actions-card">
+        <h3><i class="fa-solid fa-wallet"></i> จัดการเงิน & ออมทอง</h3>
+        <div class="tabs-actions">
+          <div class="form-group">
+            <label>จำนวนเงินที่ต้องการซื้อทอง (บาท)</label>
+            <input id="buyAmount" type="number" placeholder="ระบุจำนวนเงิน เช่น 1000">
+            <button onclick="buyGold()" class="btn-gold"><i class="fa-solid fa-basket-shopping"></i> ซื้อทองคำ</button>
+          </div>
+          <hr class="divider">
+          <div class="form-group">
+            <label>จำนวนทองที่ต้องการขาย (กรัม)</label>
+            <input id="sellAmount" type="number" placeholder="ระบุหน่วยเป็นกรัม เช่น 0.5">
+            <button onclick="sellGold()" class="btn-sell">ขายทองคำ</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid-card dca-card">
+        <h3><i class="fa-solid fa-robot gold-text"></i> ระบบ Auto Invest (DCA)</h3>
+        <p class="subtitle">ตั้งระบบซื้อทองคำสะสมอัตโนมัติรายเดือน/สัปดาห์</p>
+        <div class="form-group">
+          <input id="dcaAmount" type="number" placeholder="จำนวนเงินต่อรอบ (บาท)">
+          <select id="dcaFreq">
+            <option value="daily">ออมรายวัน</option>
+            <option value="weekly">ออมรายสัปดาห์</option>
+            <option value="monthly" selected>ออมรายเดือน</option>
+          </select>
+          <button onclick="setupDCA()" class="btn-outline">เปิดระบบออมอัตโนมัติ</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -1,161 +1,163 @@
+/* ===== THEME CONFIGURATION ===== */
+:root {
+  --bg-main: #0B0B0C;
+  --bg-card: #161618;
+  --bg-card-hover: #1F1F22;
+  --gold-primary: #E5A93C;
+  --gold-gradient: linear-gradient(135deg, #F3CD7A, #E5A93C, #B87D1F);
+  --text-main: #F5F5F7;
+  --text-muted: #8E8E93;
+  --border-color: #2C2C2E;
+  --success: #30D158;
+  --error: #FF453A;
+}
+
 body {
-  font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #ccc, #b87d1f, #d69627);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
   margin: 0;
-}
-
-.auth-page {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* กล่องหลัก */
-.container {
-  width: 100%;
-  max-width: 380px;
-  padding: 20px;
-}
-
-/* card */
-.card:hover {
-  background: white;
-  padding: 25px;
-  border-radius: 15px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  margin-bottom: 15px;
-
-  animation: fadeIn 0.4s ease;
-  transform: translateY(-3px);
-  transition: 0.2s;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.card:nth-child(1) { animation-delay: 0.1s; }
-.card:nth-child(2) { animation-delay: 0.2s; }
-.card:nth-child(3) { animation-delay: 0.3s; }
-
-/* header */
-.header {
-  text-align: center;
-}
-
-.header h1 {
-  margin: 10px 0;
-  color: #d69627;
-}
-
-/* input */
-input:focus {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  outline: none;
-  border: 1px solid #d69627;
-  box-shadow: 0 0 5px rgba(214,150,39,0.5);
-}
-
-/* button */
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 8px;
-  background: #d69627;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-button:hover {
-  background: #b87d1f;
-}
-
-/* logout */
-.logout {
-  background: #000;
-}
-
-.logout:hover {
-  background: #000;
-}
-
-/* link */
-.link {
-  margin-top: 10px;
-}
-
-.link a {
-  text-decoration: none;
-  color: #d69627;
-}
-
-/* list */
-ul {
-  text-align: left;
   padding: 0;
-  max-height: 150px;
+}
+
+/* Layout แบ่งซ้ายขวาแบบ Web App */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  margin-bottom: 40px;
+}
+
+.gold-text {
+  color: var(--gold-primary);
+}
+
+.nav-menu a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.nav-menu a:hover, .nav-menu a.active {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.nav-menu a.active i {
+  color: var(--gold-primary);
+}
+
+/* ส่วนคอนเทนต์ขวา */
+.main-content {
+  flex: 1;
+  padding: 40px;
   overflow-y: auto;
 }
 
-li {
-  list-style: none;
-  padding: 6px;
-  border-bottom: 1px solid #eee;
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
 }
 
-.toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #333;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  opacity: 0;
-  transition: 0.3s;
+/* จัดเลย์เอาต์การ์ดแสดงผลด้วย Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
 }
 
-.toast.show {
-  opacity: 1;
+.grid-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  grid-column: span 6; /* เบื้องต้นแบ่งครึ่งจอ */
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.toast.success { background: green; }
-.toast.error { background: red; }
+.grid-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
 
-input {
+/* ขยายเฉพาะการ์ดกราฟและพอร์ตให้เต็มบรรทัดกว้างขึ้น */
+.total-balance-card, .chart-card {
+  grid-column: span 12;
+}
+
+/* ส่วนแต่งปุ่มสไตล์แอปการเงิน */
+button {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 14px;
+  cursor: pointer;
+  border: none;
   width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  display: block;
+  transition: opacity 0.2s;
 }
 
-@media (max-width: 600px) {
-  .container {
-    padding: 10px;
-  }
+.btn-gold {
+  background: var(--gold-gradient);
+  color: #000;
+}
 
-  .card {
-    margin-bottom: 10px;
-  }
+.btn-sell {
+  background-color: #2C2C2E;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
 
-  input, button {
+input, select {
+  background-color: #1C1C1E;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--gold-primary);
+}
+
+/* Responsive สำหรับหน้าจอมือถือ */
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  .sidebar {
     width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .grid-card {
+    grid-column: span 12;
   }
 }

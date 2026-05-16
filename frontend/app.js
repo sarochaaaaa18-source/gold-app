@@ -99,13 +99,31 @@ async function loadUser() {
 
 // ===== UPDATE PORTFOLIO =====
 async function updatePortfolio(user) {
-  const currentPrice = price.sell;
-  const avg = user.avgBuyPrice || 0;
+  // นำราคาทองคำขายออกปัจจุบันที่ได้จาก API มาคำนวณมูลค่าสินทรัพย์จริง
+  const currentPrice = price.sell || 0; 
+  const myGoldAmount = user.goldBalance || 0;
+  const avgCost = user.avgBuyPrice || 0;
 
-  const pnl = currentPrice - avg;
-  const pnlPercent = avg > 0 ? ((pnl / avg) * 100).toFixed(2) : 0;
+  // มูลค่าทองคำ ณ ปัจจุบัน
+  const goldValue = myGoldAmount * currentPrice;
+  // เงินสินทรัพย์ทั้งหมดในพอร์ต = เงินสดที่มี + มูลค่าทองปัจจุบัน
+  const totalAssets = user.balance + goldValue;
 
-  document.getElementById("pnl").textContent = pnlPercent + "%";
+  document.getElementById("total").textContent = totalAssets.toLocaleString(undefined, {maximumFractionDigits: 2});
+  document.getElementById("cash").textContent = user.balance.toLocaleString();
+  
+  // คำนวณกำไรขาดทุนสะสม (P/L) ของทองคำในมือ
+  if (avgCost > 0) {
+    const plPercentage = (((currentPrice - avgCost) / avgCost) * 100).toFixed(2);
+    const pnlEl = document.getElementById("pnl");
+    if (plPercentage >= 0) {
+      pnlEl.textContent = `+${plPercentage}% (กำไร)`;
+      pnlEl.style.color = "var(--success)";
+    } else {
+      pnlEl.textContent = `${plPercentage}% (ขาดทุน)`;
+      pnlEl.style.color = "var(--error)";
+    }
+  }
 }
 
 // ===== GOLD PRICE =====
@@ -408,4 +426,38 @@ async function setGoal() {
 
   showToast("ตั้งเป้าสำเร็จ");
   loadUser();
+}
+
+// ฟังก์ชันเปิดคำสั่งออมอัตโนมัติ (DCA) จากหน้าบ้าน ไปหา API ใหม่
+async function setupDCA() {
+  const amount = document.getElementById("dcaAmount").value;
+  const frequency = document.getElementById("dcaFreq").value;
+
+  if(!amount || amount <= 0) return showToast("กรุณาระบุจำนวนเงินที่ถูกต้อง", "error");
+
+  const data = await api("/api/auto-invest", "POST", { amount, frequency });
+  if (data.success) {
+    showToast(data.message, "success");
+    document.getElementById("dcaAmount").value = "";
+    loadUser();
+  } else {
+    showToast(data.message, "error");
+  }
+}
+
+// ฟังก์ชันเรียกดูข้อมูลประวัติราคาตามช่วงเวลากดปุ่ม 1D 1W 1M เพื่ออัปเดต Chart.js
+async function changeChartRange(range) {
+  // สลับสถานะปุ่ม Active ของปุ่มเวลา
+  const buttons = document.querySelectorAll(".time-filters button");
+  buttons.forEach(btn => btn.classList.remove("active"));
+  event.target.classList.add("active");
+
+  const data = await api(`/api/gold-chart-history?range=${range}`);
+  if(data.success && data.history) {
+    const labels = data.history.map(item => new Date(item.timestamp).toLocaleDateString());
+    const prices = data.history.map(item => item.sellPrice);
+    
+    // เรียกฟังก์ชันเรนเดอร์กราฟใหม่ด้วยข้อมูลจากฐานข้อมูลจริง
+    renderAdvancedChart(labels, prices);
+  }
 }
