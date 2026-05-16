@@ -23,12 +23,16 @@ let goldPriceData = {
   sell: 0
 };
 
+// เก็บค่าราคาทองล่าสุดไว้เช็กเทียบ เพื่อไม่ให้เซฟลง DB ซ้ำรัวๆ
+let lastSavedPrice = 0; 
+
 // ===== CONNECT DB =====
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log(err));
 
 // ===== SCHEMA =====
+// (แก้ไข 1: ใส่รายละเอียด Schema กลับคืนมาให้ครบ)
 const transactionSchema = new mongoose.Schema({
   type: String,
   amount: Number,
@@ -41,39 +45,43 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   balance: Number,
-
-  goldBalance: {
-    type: Number,
-    default: 0
-  },
-
+  goldBalance: { type: Number, default: 0 },
   avgBuyPrice: { type: Number, default: 0 },
-
   goalGold: { type: Number, default: 0 },
-
   transactions: [transactionSchema]
 });
-
 const User = mongoose.model("User", userSchema);
+
+const goldHistorySchema = new mongoose.Schema({
+  buyPrice: Number,
+  sellPrice: Number,
+  timestamp: { type: Date, default: Date.now }
+});
+const GoldHistory = mongoose.model("GoldHistory", goldHistorySchema);
+
+const dcaSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  amount: Number,
+  frequency: String,
+  isActive: { type: Boolean, default: true },
+  nextRunDate: Date,
+  createdAt: { type: Date, default: Date.now }
+});
+const DCA = mongoose.model("DCA", dcaSchema);
 
 // ===== AUTH MIDDLEWARE =====
 function auth(req, res, next) {
   const authHeader = req.headers.authorization;
-
-  console.log("AUTH HEADER:", authHeader); // 🔥 debug
-
   if (!authHeader) {
     return res.status(401).json({ message: "No token" });
   }
 
   const token = authHeader.split(" ")[1];
-
   try {
     const decoded = jwt.verify(token, SECRET);
     req.user = decoded;
     next();
   } catch (err) {
-    console.log("TOKEN ERROR:", err.message);
     return res.status(401).json({ message: "Invalid token" });
   }
 }
@@ -82,18 +90,13 @@ function auth(req, res, next) {
 app.post("/register", async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    console.log("REGISTER:", email);
-
     const exist = await User.findOne({ email });
 
     if (exist) {
-      console.log("USER EXISTS");
       return res.json({ success: false, message: "User exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = new User({
       email,
       password: hashedPassword,
@@ -102,13 +105,9 @@ app.post("/register", async (req, res) => {
     });
 
     await newUser.save();
-
-    console.log("REGISTER SUCCESS");
-
     res.json({ success: true });
 
   } catch (err) {
-    console.log("REGISTER ERROR:", err.message);
     res.json({ success: false, error: err.message });
   }
 });
@@ -117,9 +116,6 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    console.log("LOGIN INPUT:", email);
-
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -127,7 +123,6 @@ app.post("/login", async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.json({ success: false });
     }
@@ -141,19 +136,13 @@ app.post("/login", async (req, res) => {
     res.json({ success: true, token });
 
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
-
-    res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
 // ===== GET USER =====
 app.get("/me", auth, async (req, res) => {
   const user = await User.findById(req.user.id);
-
   if (!user) return res.json({ success: false });
 
   res.json({
@@ -180,19 +169,11 @@ app.post("/deposit", auth, async (req, res) => {
     }
 
     const user = await User.findById(req.user.id);
-
     user.balance += numAmount;
-
-    user.transactions.push({
-      type: "deposit",
-      amount: numAmount,
-      date: new Date().toLocaleString()
-    });
-
+    user.transactions.push({ type: "deposit", amount: numAmount, date: new Date().toLocaleString() });
+    
     await user.save();
-
     res.json({ success: true, user });
-
   } catch (err) {
     res.json({ success: false, error: err.message });
   }
@@ -209,23 +190,15 @@ app.post("/withdraw", auth, async (req, res) => {
     }
 
     const user = await User.findById(req.user.id);
-
     if (user.balance < numAmount) {
       return res.json({ success: false, message: "Not enough money" });
     }
 
     user.balance -= numAmount;
-
-    user.transactions.push({
-      type: "withdraw",
-      amount: numAmount,
-      date: new Date().toLocaleString()
-    });
+    user.transactions.push({ type: "withdraw", amount: numAmount, date: new Date().toLocaleString() });
 
     await user.save();
-
     res.json({ success: true, user });
-
   } catch (err) {
     res.json({ success: false, error: err.message });
   }
@@ -235,60 +208,29 @@ app.post("/withdraw", auth, async (req, res) => {
 app.post("/transfer", auth, async (req, res) => {
   try {
     const { toEmail, amount } = req.body;
-
     const numAmount = Number(amount);
 
     if (isNaN(numAmount) || numAmount <= 0) {
       return res.json({ success: false, message: "Invalid amount" });
     }
 
-    // ✅ ใช้ id จาก token
     const sender = await User.findById(req.user.id);
-
-    // receiver ยังหาโดย email ได้
     const receiver = await User.findOne({ email: toEmail });
 
-    if (!sender) {
-      return res.json({ success: false, message: "Sender not found" });
-    }
+    if (!sender) return res.json({ success: false, message: "Sender not found" });
+    if (!receiver) return res.json({ success: false, message: "Receiver not found" });
+    if (sender.balance < numAmount) return res.json({ success: false, message: "Not enough money" });
 
-    if (!receiver) {
-      return res.json({ success: false, message: "Receiver not found" });
-    }
-
-    if (sender.balance < numAmount) {
-      return res.json({ success: false, message: "Not enough money" });
-    }
-
-    // 💸 หักเงิน sender
     sender.balance -= numAmount;
-
-    // 💰 เพิ่มเงิน receiver
     receiver.balance += numAmount;
 
-    // 🧾 log sender
-    sender.transactions.push({
-      type: "transfer_out",
-      amount: numAmount,
-      to: receiver.email, // ใช้ของจริงจาก DB
-      date: new Date().toLocaleString()
-    });
-
-    // 🧾 log receiver
-    receiver.transactions.push({
-      type: "transfer_in",
-      amount: numAmount,
-      from: sender.email,
-      date: new Date().toLocaleString()
-    });
+    sender.transactions.push({ type: "transfer_out", amount: numAmount, to: receiver.email, date: new Date().toLocaleString() });
+    receiver.transactions.push({ type: "transfer_in", amount: numAmount, from: sender.email, date: new Date().toLocaleString() });
 
     await sender.save();
     await receiver.save();
-
     res.json({ success: true });
-
   } catch (err) {
-    console.log("TRANSFER ERROR:", err);
     res.json({ success: false, message: err.message });
   }
 });
@@ -297,110 +239,115 @@ app.post("/transfer", auth, async (req, res) => {
 app.post("/set-goal", auth, async (req, res) => {
   try {
     const goal = Number(req.body.goal);
-
     if (isNaN(goal) || goal <= 0) {
       return res.json({ success: false, message: "Invalid goal" });
     }
 
     const user = await User.findById(req.user.id);
-
     user.goalGold = goal;
-
     await user.save();
-
     res.json({ success: true });
-
   } catch (err) {
     res.json({ success: false, message: err.message });
   }
 });
 
-// ===== SERVE FRONTEND =====
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/index.html"));
-});
-
-// ===== GOLD PRICE =====
-app.get("/gold-price", (req, res) => {
-  res.json(goldPriceData);
-});
-
-setInterval(updateGoldPrice, 10000);
-
-// โหลดครั้งแรก
-updateGoldPrice();
-
 // ===== UPDATE GOLD PRICE FROM API =====
 async function updateGoldPrice() {
   try {
     const res = await axios.get("https://api.gold-api.com/price/XAU");
-
     const usd = res.data.price;
-
-    // แปลงเป็นบาท (ประมาณ)
-    const thb = usd * 36;
+    const thb = usd * 36; 
 
     goldPriceData.buy = Math.floor(thb);
     goldPriceData.sell = Math.floor(thb + 200);
 
-    console.log("🔥 Gold updated:", goldPriceData);
-
+    // (แก้ไข 2: บันทึกลงฐานข้อมูลเฉพาะเมื่อราคาเปลี่ยนไปจากเดิมเท่านั้น)
+    if (goldPriceData.buy !== lastSavedPrice) {
+      await GoldHistory.create({
+        buyPrice: goldPriceData.buy,
+        sellPrice: goldPriceData.sell
+      });
+      lastSavedPrice = goldPriceData.buy;
+      console.log("🔥 Gold price changed & saved to DB:", goldPriceData);
+    }
   } catch (err) {
     console.log("❌ GOLD API ERROR:", err.message);
   }
 }
+
+// โหลดครั้งแรก และตั้งเวลาอัปเดตทุก 10 วินาที
+updateGoldPrice();
+setInterval(updateGoldPrice, 10000);
+
+// API Endpoint สำหรับดึงข้อมูลราคาทองย้อนหลังไปทำกราฟ (1M, 3M, 6M)
+app.get("/api/gold-chart-history", async (req, res) => {
+  try {
+    const range = req.query.range || "1d"; 
+    let limitDays = 1;
+    
+    if (range === "1w") limitDays = 7;
+    else if (range === "1m") limitDays = 30;
+    else if (range === "1y") limitDays = 365;
+
+    const edgeDate = new Date();
+    edgeDate.setDate(edgeDate.getDate() - limitDays);
+
+    const history = await GoldHistory.find({ timestamp: { $gte: edgeDate } }).sort({ timestamp: 1 });
+    res.json({ success: true, history });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// เปิดใช้งานระบบ DCA
+app.post("/api/auto-invest", auth, async (req, res) => {
+  try {
+    const { amount, frequency } = req.body;
+    if (!amount || amount <= 0) return res.json({ success: false, message: "ยอดเงินไม่ถูกต้อง" });
+
+    let nextRun = new Date();
+    if (frequency === "daily") nextRun.setDate(nextRun.getDate() + 1);
+    else if (frequency === "weekly") nextRun.setDate(nextRun.getDate() + 7);
+    else if (frequency === "monthly") nextRun.setMonth(nextRun.getMonth() + 1);
+
+    const newDCA = await DCA.findOneAndUpdate(
+      { userId: req.user.id },
+      { amount, frequency, nextRunDate: nextRun, isActive: true },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, message: "ตั้งค่าระบบออมอัตโนมัติสำเร็จ", dca: newDCA });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
 
 // ===== BUY GOLD =====
 app.post("/buy-gold", auth, async (req, res) => {
   try {
     const num = Number(req.body.amount);
 
-    if (req.body.amount === undefined) {
-      return res.json({ success: false, message: "Missing amount" });
-    }
-
-    if (!goldPriceData.buy || !goldPriceData.sell) {
-      return res.json({ success: false, message: "Gold price not ready" });
-    }
-
-    if (isNaN(num) || num <= 0) {
-      return res.json({ success: false, message: "Invalid amount" });
-    }
+    if (req.body.amount === undefined) return res.json({ success: false, message: "Missing amount" });
+    if (!goldPriceData.buy || !goldPriceData.sell) return res.json({ success: false, message: "Gold price not ready" });
+    if (isNaN(num) || num <= 0) return res.json({ success: false, message: "Invalid amount" });
 
     const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.json({ success: false, message: "User not found" });
-    }
-
-    if (user.balance < num) {
-      return res.json({ success: false, message: "Not enough money" });
-    }
+    if (!user) return res.json({ success: false, message: "User not found" });
+    if (user.balance < num) return res.json({ success: false, message: "Not enough money" });
 
     const price = goldPriceData.buy;
     const goldAmount = num / price;
-
-    // คำนวณต้นทุนเฉลี่ยใหม่
     const totalGold = (user.goldBalance || 0) + goldAmount;
 
-    user.avgBuyPrice =
-      ((user.avgBuyPrice * (user.goldBalance || 0)) + num) / totalGold;
-
+    user.avgBuyPrice = ((user.avgBuyPrice * (user.goldBalance || 0)) + num) / totalGold;
     user.goldBalance = totalGold;
     user.balance -= num;
-
-    user.transactions.push({
-      type: "buy_gold",
-      amount: num,
-      date: new Date().toLocaleString()
-    });
+    user.transactions.push({ type: "buy_gold", amount: num, date: new Date().toLocaleString() });
 
     await user.save();
-
     res.json({ success: true, user });
-
   } catch (err) {
-    console.log("BUY ERROR:", err);
     res.json({ success: false, message: err.message });
   }
 });
@@ -410,58 +357,45 @@ app.post("/sell-gold", auth, async (req, res) => {
   try {
     const num = Number(req.body.gold);
 
-    if (req.body.gold === undefined) {
-      return res.json({ success: false, message: "Missing gold" });
-    }
-
-    if (!goldPriceData.sell || !goldPriceData.buy) {
-      return res.json({ success: false, message: "Gold price not ready" });
-    }
-
-    if (isNaN(num) || num <= 0) {
-      return res.json({ success: false, message: "Invalid amount" });
-    }
+    if (req.body.gold === undefined) return res.json({ success: false, message: "Missing gold" });
+    if (!goldPriceData.sell || !goldPriceData.buy) return res.json({ success: false, message: "Gold price not ready" });
+    if (isNaN(num) || num <= 0) return res.json({ success: false, message: "Invalid amount" });
 
     const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.json({ success: false, message: "User not found" });
-    }
-
-    if ((user.goldBalance || 0) < num) {
-      return res.json({ success: false, message: "Not enough gold" });
-    }
+    if (!user) return res.json({ success: false, message: "User not found" });
+    if ((user.goldBalance || 0) < num) return res.json({ success: false, message: "Not enough gold" });
 
     const price = goldPriceData.sell;
     const money = num * price;
 
     user.goldBalance -= num;
     user.balance += money;
-
-    user.transactions.push({
-      type: "sell_gold",
-      amount: money,
-      date: new Date().toLocaleString()
-    });
+    user.transactions.push({ type: "sell_gold", amount: money, date: new Date().toLocaleString() });
 
     await user.save();
-
     res.json({ success: true, user });
-
   } catch (err) {
-    console.log("SELL ERROR:", err);
     res.json({ success: false, message: err.message });
   }
 });
 
-// ===== START =====
-const PORT = process.env.PORT || 3000;
+// ===== GOLD PRICE ENDPOINT =====
+app.get("/gold-price", (req, res) => {
+  res.json(goldPriceData);
+});
 
-app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+// ===== SERVE FRONTEND (Catch-all) =====
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
 app.get("/reset", async (req, res) => {
   await User.deleteMany({});
   res.send("DB reset success");
+});
+
+// ===== START =====
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
 });
